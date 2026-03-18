@@ -26,50 +26,63 @@ Expected output:
 import functools
 import time
 import random
+from functools import wraps
 
 
 # ---------------------------------------------------------------------------
 # Decorator 1: @timer
 # ---------------------------------------------------------------------------
 def timer(func):
-
-    @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        start_time = time.perf_counter()
+        start = time.perf_counter()
         result = func(*args, **kwargs)
-        end_time = time.perf_counter()
+        end = time.perf_counter()
 
-        execution_time = end_time - start_time
-        print(f"Функция'{func.__name__}' выполнена за: {execution_time:.6f} секунд")
+        print(f"Функция {func.__name__} выполнилась за {end - start:.4f} сек.")
+        return  result
+    return wrapper
 
-        return result
-    return wrapper()
+
 
 # ---------------------------------------------------------------------------
 # Decorator 2: @retry(max_attempts, delay)
 # ---------------------------------------------------------------------------
 def retry(*, max_attempts: int = 3, delay: float = 1.0):
-    """
-    Decorator factory: retry the function up to `max_attempts` times.
-    Wait `delay` seconds between attempts.
-    If all attempts fail, re-raise the last exception.
-    """
-    # TODO: your code here
-    pass
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    return func(*args,**kwargs)
+                except Exception as e:
+                    last_exception = e
+                    print(f"Попытка {attempt}/{max_attempts} не удалась: {e}")
+                    if attempt < max_attempts:
+                        time.sleep(delay)
+
+            raise last_exception
+        return wrapper
+    return decorator
 
 
-# ---------------------------------------------------------------------------
+        # ---------------------------------------------------------------------------
 # Decorator 3: @cache
 # ---------------------------------------------------------------------------
 def cache(func):
-    """
-    Cache (memoize) function results based on arguments.
-    On repeated calls with the same args — return stored result.
+    results = {}
 
-    Hint: use a dict to store results, with (args, tuple(kwargs.items())) as key.
-    """
-    # TODO: your code here
-    pass
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        key = (args, tuple(sorted(kwargs.items())))
+
+        if key not in results:
+            results[key] = func(*args, **kwargs)
+
+        return results[key]
+
+    return wrapper
 
 
 # ---------------------------------------------------------------------------
